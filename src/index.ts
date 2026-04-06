@@ -80,6 +80,16 @@ async function bootstrap() {
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/", (_request: Request, response: Response) => {
+    return response.json({
+      ok: true,
+      service: "RouteX API",
+      dashboard: "Run the frontend from frontend for the live UI",
+      legacyDashboard: "/legacy",
+      endpoints: ["/rpc", "/api/health", "/api/metrics", "/api/events", "/api/routes", "/legacy"],
+    });
+  });
+
+  app.get("/legacy", (_request: Request, response: Response) => {
     response.type("html");
     return response.send(renderDashboardHtml());
   });

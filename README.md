@@ -61,7 +61,7 @@ Lower score = better candidate. A node 2 slots behind carries a +24 penalty befo
 
 **3. Proxy Gateway** — classifies each request (`read` / `fresh-read` / `write`), picks the best provider meeting that strategy's slot-lag threshold, and retries on failure with the next-best provider.
 
-**4. Live Dashboard** — real-time web UI at `http://localhost:8080` showing provider health, slot lag, scores, routing decisions, and a dynamic race visualization.
+**4. Live Dashboard** — the React frontend in `frontend/` shows provider health, slot lag, scores, routing decisions, and a dynamic race visualization while the backend runs on `http://localhost:8080`. The legacy built-in dashboard is also available from the backend at `http://127.0.0.1:8080/legacy`.
 
 ---
 
@@ -88,9 +88,18 @@ npm install
 # 2. Configure providers (copy the example and fill in your RPC URLs)
 cp routex.providers.example.json routex.providers.json
 
-# 3. Start
+# 3. Start the backend
 npm start
 # → http://127.0.0.1:8080
+
+# 4. Start the dashboard frontend
+cd frontend
+npm install
+npm run dev
+# → http://127.0.0.1:3000
+
+# Optional: use the legacy built-in dashboard
+# → http://127.0.0.1:8080/legacy
 ```
 
 Point your Solana SDK at `http://127.0.0.1:8080/rpc` instead of a direct RPC URL.
@@ -144,7 +153,7 @@ npm run demo:benchmark # Terminal 3 (optional): stress test
 
 | Field | Description |
 |---|---|
-| `name` | Unique label shown in the dashboard |
+| `name` | Unique label shown in the RouteX dashboard |
 | `rpcUrl` | HTTPS RPC endpoint |
 | `yellowstoneUrl` | gRPC host:port for Yellowstone slot streaming (optional) |
 | `token` | gRPC auth token (required if `yellowstoneUrl` is set) |
@@ -162,7 +171,8 @@ npm run demo:benchmark # Terminal 3 (optional): stress test
 | `GET` | `/api/metrics` | Routing metrics |
 | `GET` | `/api/events` | System event log |
 | `GET` | `/api/routes` | Recent routing decisions |
-| `GET` | `/` | Live dashboard |
+| `GET` | `/` | API info / startup hint |
+| `GET` | `/legacy` | Legacy built-in dashboard |
 
 ---
 
