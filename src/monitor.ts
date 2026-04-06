@@ -78,13 +78,7 @@ function extractYellowstoneSlot(update: unknown): number | null {
 }
 
 function normalizeYellowstoneEndpoint(endpoint: string): string {
-  const trimmed = endpoint.trim();
-
-  if (trimmed.includes("://")) {
-    return trimmed;
-  }
-
-  return `https://${trimmed}`;
+  return endpoint.trim();
 }
 
 async function probeProvider(
@@ -177,23 +171,11 @@ function startRpcPollingMonitor(
   };
 }
 
-function importYellowstoneModule(): {
-  default: new (endpoint: string, xToken?: string, channelOptions?: Record<string, unknown>) => {
-    connect: () => Promise<void>;
-    subscribe: () => Promise<YellowstoneStream>;
-  };
-  CommitmentLevel: {
-    PROCESSED: number;
-  };
-} {
-  return require("@triton-one/yellowstone-grpc") as {
-    default: new (endpoint: string, xToken?: string, channelOptions?: Record<string, unknown>) => {
-      connect: () => Promise<void>;
-      subscribe: () => Promise<YellowstoneStream>;
-    };
-    CommitmentLevel: {
-      PROCESSED: number;
-    };
+function importYellowstoneModule(): any {
+  const sdk = require("@triton-one/yellowstone-grpc");
+  return {
+    default: sdk.Client || sdk.default || sdk,
+    CommitmentLevel: sdk.CommitmentLevel,
   };
 }
 
@@ -246,15 +228,17 @@ function startYellowstoneMonitor(
     "info",
     "yellowstone-rpc-hybrid",
     fallbackProviders.length > 0
-      ? "Yellowstone mode is active with RPC polling enabled for all providers and fallback-only coverage for providers without Yellowstone"
-      : "Yellowstone mode is active with RPC polling enabled as a fallback and HTTP health verifier for all providers",
+      ? "Yellowstone mode is active; RPC polling covers non-Yellowstone providers only"
+      : "Yellowstone mode is active; all providers are covered by Yellowstone streaming",
     null,
     {
       yellowstoneProviders: eligibleProviders.map((provider) => provider.name),
       rpcOnlyProviders: fallbackProviders.map((provider) => provider.name),
     },
   );
-  rpcHybridHandle = startRpcPollingMonitor(providerStore, config, config.providers);
+  if (fallbackProviders.length > 0) {
+    rpcHybridHandle = startRpcPollingMonitor(providerStore, config, fallbackProviders);
+  }
 
   const subscribeToProvider = async (
     provider: ProviderConfig,
@@ -265,7 +249,6 @@ function startYellowstoneMonitor(
       const client = new Client(
         normalizeYellowstoneEndpoint(provider.yellowstoneUrl ?? ""),
         provider.token,
-        DEFAULT_YELLOWSTONE_CHANNEL_OPTIONS,
       );
 
       if (typeof client.connect === "function") {
@@ -291,7 +274,7 @@ function startYellowstoneMonitor(
       };
 
       await new Promise<void>((resolve, reject) => {
-        stream.write(subscriptionRequest, (error) => {
+        stream.write(subscriptionRequest, (error: any) => {
           if (!error) {
             resolve();
             return;
@@ -308,7 +291,7 @@ function startYellowstoneMonitor(
         provider.name,
       );
 
-      stream.on("data", (update) => {
+      stream.on("data", (update: any) => {
         const pingId = (update as { ping?: { id?: number } } | null)?.ping?.id;
 
         if (typeof pingId === "number") {
@@ -342,7 +325,7 @@ function startYellowstoneMonitor(
         providerStore.markActiveProvider(bestProvider?.name ?? null);
       });
 
-      stream.on("error", (error) => {
+      stream.on("error", (error: any) => {
         const message =
           error instanceof Error ? error.message : "Yellowstone stream error";
         providerStore.updateProbeFailure(provider.name, message, false, "yellowstone");
