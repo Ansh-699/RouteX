@@ -17,9 +17,9 @@ export default function Features() {
           explained clearly.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-          A professional product site should explain the value before it asks
-          users to operate the system. These pages break RouteX into focused,
-          readable stories.
+          These pages break RouteX into focused product capabilities so teams
+          can understand how routing, failover, observability, and controls fit
+          together.
         </p>
       </section>
 

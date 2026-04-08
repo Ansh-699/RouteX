@@ -8,7 +8,7 @@ export default function Footer() {
           <div className="font-medium text-foreground">RouteX</div>
           <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">
             Intelligent RPC routing for Solana with failover visibility, cost-aware
-            decisions, and demo-ready observability.
+            decisions, and built-in observability.
           </p>
         </div>
 

@@ -15,8 +15,8 @@ const highlights = [
     text: "Fastest, Freshest, Cheapest, and custom rules with one click.",
   },
   {
-    title: "Demo-ready",
-    text: "Simulate failures, latency spikes, and stale lag without luck.",
+    title: "Operational clarity",
+    text: "Simulate failures, latency spikes, and stale lag when you need to validate behavior.",
   },
 ];
 
@@ -104,10 +104,10 @@ export default function Index() {
           </h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {[
-              "Smart modes make the product immediately demoable.",
+              "Smart modes keep routing behavior understandable.",
               "Routing explanations turn infrastructure into something understandable.",
               "Mini charts and event streams make the app feel alive.",
-              "Demo mode guarantees a strong live walkthrough under pressure.",
+              "Simulation controls make failover and routing validation repeatable.",
             ].map((item) => (
               <div
                 key={item}
@@ -124,7 +124,7 @@ export default function Index() {
             <div className="border-b border-white/10 p-6">
               <div className="micro-label text-white/45">Live app preview</div>
               <h3 className="mt-3 text-2xl font-semibold tracking-tight">
-                Judges see the value instantly.
+                Routing decisions stay visible in real time.
               </h3>
             </div>
 
@@ -146,13 +146,13 @@ export default function Index() {
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <div className="micro-label text-white/45">Demo Mode</div>
+                  <div className="micro-label text-white/45">Simulation</div>
                   <div className="mt-2 flex items-center gap-2 text-sm font-medium">
                     <Play className="h-4 w-4" />
                     Simulate provider failure
                   </div>
                   <p className="mt-2 text-sm leading-6 text-white/65">
-                    Trigger failure, latency spikes, or stale lag in one click.
+                    Trigger failure, latency spikes, or stale lag to validate routing behavior.
                   </p>
                 </div>
               </div>

@@ -30,12 +30,12 @@ const scenarios: Array<{
   {
     scenario: "stale-slot-lag",
     label: "Stale Lag",
-    description: "Push the leader behind the chain tip to demo freshness routing.",
+    description: "Push the leader behind the chain tip to validate freshness routing.",
     icon: AlertTriangle,
   },
   {
     scenario: "reset",
-    label: "Reset Demo",
+    label: "Reset State",
     description: "Restore the mock cluster to its original healthy state.",
     icon: RotateCcw,
   },
@@ -49,7 +49,7 @@ export function DemoModePanel({
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="micro-label text-xs">One-Click Demo Mode</CardTitle>
+        <CardTitle className="micro-label text-xs">Operational Simulation</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-xl border bg-background p-4">
@@ -58,8 +58,8 @@ export function DemoModePanel({
           </div>
           <p className="mt-1 text-xs font-mono text-muted-foreground">
             {demo?.available
-              ? "These controls mutate the local demo providers so you can guarantee a strong live walkthrough."
-              : "Start the bundled demo cluster to unlock one-click failure, latency, and stale-slot simulations."}
+              ? "These controls mutate the local mock providers so routing behavior can be tested on demand."
+              : "Start the bundled simulation cluster to unlock one-click failure, latency, and stale-slot simulations."}
           </p>
         </div>
 
@@ -85,7 +85,7 @@ export function DemoModePanel({
 
         {demo?.providers.length ? (
           <div className="space-y-2">
-            <div className="micro-label">Demo Providers</div>
+            <div className="micro-label">Simulation Providers</div>
             {demo.providers.map((provider) => (
               <div
                 key={provider.name}

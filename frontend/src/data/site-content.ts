@@ -28,7 +28,7 @@ export const featureEntries: FeatureEntry[] = [
     title: "Smart Routing Modes",
     eyebrow: "Fastest · Freshest · Cheapest",
     summary:
-      "Switch RouteX between demo-friendly presets so the product feels transparent and controllable in seconds.",
+      "Switch RouteX between clear routing presets so performance, freshness, and budget are easy to control.",
     icon: Sparkles,
     heroMetric: "3 presets",
     heroLabel: "plus custom rules",
@@ -38,14 +38,14 @@ export const featureEntries: FeatureEntry[] = [
       "Cheapest keeps budget pressure visible without losing failover safety.",
     ],
     callout:
-      "Professional products feel opinionated and controllable. Smart modes make the router instantly understandable.",
+      "Smart modes make the router understandable without forcing operators into a complicated policy engine.",
   },
   {
     slug: "auto-failover-visibility",
     title: "Auto-Failover Visibility",
     eyebrow: "Trust Through Clarity",
     summary:
-      "Surface unhealthy providers and live provider switches in a way judges and users can understand immediately.",
+      "Surface unhealthy providers and live provider switches in a way operators can understand immediately.",
     icon: TriangleAlert,
     heroMetric: "Live banner",
     heroLabel: "with switch reason",
@@ -67,12 +67,12 @@ export const featureEntries: FeatureEntry[] = [
     heroMetric: "5-minute view",
     heroLabel: "latency, lag, error rate",
     bullets: [
-      "Tiny trend charts make the health story easy to follow in a demo.",
+      "Tiny trend charts make provider health easy to follow over time.",
       "Data stays lightweight and tied to the live provider state.",
       "Observability becomes part of the product, not a hidden ops screen.",
     ],
     callout:
-      "Mini charts make RouteX feel alive instead of static, which matters a lot in presentations.",
+      "Mini charts add context quickly without sending operators to a separate monitoring stack.",
   },
   {
     slug: "custom-routing-rules",
@@ -89,14 +89,14 @@ export const featureEntries: FeatureEntry[] = [
       "Fallback provider selection turns policy into something explicit.",
     ],
     callout:
-      "Custom rules make the app feel capable while staying easy enough for a live walkthrough.",
+      "Custom rules add flexibility without turning routing configuration into a heavyweight workflow.",
   },
   {
     slug: "demo-mode",
-    title: "One-Click Demo Mode",
-    eyebrow: "Guaranteed Live Story",
+    title: "Operational Simulation",
+    eyebrow: "Built-In Simulation",
     summary:
-      "Simulate provider failure, latency spikes, and stale slot lag on demand so your demo never depends on luck.",
+      "Simulate provider failure, latency spikes, and stale slot lag on demand for testing, validation, and walkthroughs.",
     icon: Gauge,
     heroMetric: "4 scenarios",
     heroLabel: "including reset",
@@ -106,7 +106,7 @@ export const featureEntries: FeatureEntry[] = [
       "Create stale lag to highlight freshness-aware behavior.",
     ],
     callout:
-      "Hackathon demos become much stronger when the wow moment is deterministic.",
+      "Built-in simulations make validation and product walkthroughs repeatable.",
   },
   {
     slug: "alerts-and-explanations",
@@ -120,7 +120,7 @@ export const featureEntries: FeatureEntry[] = [
     bullets: [
       "Webhook alerts cover stale providers and active failovers.",
       "Request explanations turn routing from black box into product logic.",
-      "Recent request rationale helps users and judges trust the system.",
+      "Recent request rationale helps teams trust the system.",
     ],
     callout:
       "Good infrastructure products narrate their choices. Great ones do it in plain language.",
@@ -140,7 +140,7 @@ export const featureEntries: FeatureEntry[] = [
       "Cost stays visible in both the UI and the routing engine.",
     ],
     callout:
-      "Cost-aware routing makes RouteX feel useful for production teams, not just demos.",
+      "Cost-aware routing helps teams balance infrastructure spend with performance and freshness.",
   },
   {
     slug: "launch-ready-dashboard",
