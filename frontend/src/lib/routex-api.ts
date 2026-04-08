@@ -1,6 +1,13 @@
 export type MonitorMode = "rpc" | "yellowstone";
 export type EventLevel = "info" | "warn" | "error";
 export type MethodStrategy = "read" | "fresh-read" | "write";
+export type RoutingPreference = "fastest" | "freshest" | "cheapest";
+export type SmartMode = RoutingPreference | "custom";
+export type DemoScenario =
+  | "provider-failure"
+  | "latency-spike"
+  | "stale-slot-lag"
+  | "reset";
 
 export type ApiProvider = {
   name: string;
@@ -24,8 +31,61 @@ export type ApiProvider = {
   score: number | null;
   writeEnabled: boolean;
   priorityBias: number;
+  costScore: number;
   tags: string[];
   monitorSource: "rpc" | "yellowstone" | "none";
+};
+
+export type RoutingRules = {
+  read: RoutingPreference;
+  freshRead: RoutingPreference;
+  write: RoutingPreference;
+  fallbackProvider: string | null;
+};
+
+export type AlertSettings = {
+  telegramWebhookUrl: string | null;
+  discordWebhookUrl: string | null;
+  notifyOnProviderStale: boolean;
+  notifyOnFailover: boolean;
+};
+
+export type SettingsResponse = {
+  mode: SmartMode;
+  rules: RoutingRules;
+  alerts: AlertSettings;
+  providerCosts: Record<string, number>;
+  availableFallbackProviders: string[];
+};
+
+export type RouteCandidateSnapshot = {
+  providerName: string;
+  routeScore: number | null;
+  preference: RoutingPreference;
+  latencyMs: number | null;
+  slotLag: number | null;
+  costScore: number;
+  healthy: boolean;
+  active: boolean;
+};
+
+export type RouteExplanation = {
+  summary: string;
+  mode: SmartMode;
+  preference: RoutingPreference;
+  reasons: string[];
+  fallbackProvider: string | null;
+  strictMaxSlotLag: number | null;
+  policyRelaxed: boolean;
+  candidateSnapshot: RouteCandidateSnapshot[];
+};
+
+export type FailoverBanner = {
+  previousProviderName: string | null;
+  nextProviderName: string | null;
+  message: string;
+  reason: string;
+  createdAt: string;
 };
 
 export type HealthResponse = {
@@ -37,6 +97,9 @@ export type HealthResponse = {
   providers: ApiProvider[];
   monitorMode: MonitorMode;
   lastActiveSwitchAt: string | null;
+  latestFailover: FailoverBanner | null;
+  routingMode: SmartMode;
+  routingRules: RoutingRules;
 };
 
 export type MetricsResponse = {
@@ -53,6 +116,7 @@ export type MetricsResponse = {
   routeProviderCounts: Record<string, number>;
   methodCountByStrategy: Record<string, number>;
   monitorMode: MonitorMode;
+  smartMode: SmartMode;
   providers: ApiProvider[];
 };
 
@@ -68,6 +132,8 @@ export type RouteLogEntry = {
   durationMs: number;
   errorMessage: string | null;
   createdAt: string;
+  mode: SmartMode;
+  explanation: RouteExplanation | null;
 };
 
 export type EventEntry = {
@@ -80,6 +146,41 @@ export type EventEntry = {
   details?: Record<string, unknown>;
 };
 
+export type ProviderHistoryPoint = {
+  createdAt: string;
+  slotLag: number | null;
+  score: number | null;
+  lastKnownSlot: number | null;
+  latencyMs: number | null;
+  errorRate: number;
+  healthy: boolean;
+};
+
+export type HistoryResponse = Record<string, ProviderHistoryPoint[]>;
+
+export type DemoBehavior = {
+  lagSlots: number;
+  latencyMs: number;
+  errorRate: number;
+  writeFailureRate: number;
+  enabled: boolean;
+};
+
+export type DemoProviderState = {
+  name: string;
+  available: boolean;
+  adminUrl: string;
+  currentSlot: number | null;
+  chainTip: number | null;
+  behavior: DemoBehavior | null;
+  error: string | null;
+};
+
+export type DemoStatus = {
+  available: boolean;
+  providers: DemoProviderState[];
+};
+
 export type ProviderView = {
   id: string;
   name: string;
@@ -87,6 +188,7 @@ export type ProviderView = {
   lag: number | null;
   routes: number;
   score: number | null;
+  costScore: number;
   color: string;
   colorHsl: string;
   active: boolean;
@@ -115,11 +217,11 @@ type ProviderColor = {
 };
 
 const providerPalette: ProviderColor[] = [
-  { hex: "#10e890", hsl: "154 82% 49%" },
-  { hex: "#2eb8ff", hsl: "198 100% 59%" },
-  { hex: "#ff2e88", hsl: "334 100% 59%" },
-  { hex: "#ffc96a", hsl: "39 100% 71%" },
-  { hex: "#9d82ff", hsl: "253 100% 75%" },
+  { hex: "#f5f5f5", hsl: "0 0% 96%" },
+  { hex: "#cfcfcf", hsl: "0 0% 81%" },
+  { hex: "#9b9b9b", hsl: "0 0% 61%" },
+  { hex: "#767676", hsl: "0 0% 46%" },
+  { hex: "#565656", hsl: "0 0% 34%" },
 ];
 
 const apiBase = (import.meta.env.VITE_ROUTEX_API_BASE ?? "").replace(/\/$/, "");
@@ -144,14 +246,42 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function fetchDashboardSnapshot() {
-  const [health, metrics, events, routes] = await Promise.all([
+  const [health, metrics, events, routes, history, settings, demo] = await Promise.all([
     apiFetch<HealthResponse>("/api/health"),
     apiFetch<MetricsResponse>("/api/metrics"),
     apiFetch<EventEntry[]>("/api/events"),
     apiFetch<RouteLogEntry[]>("/api/routes"),
+    apiFetch<HistoryResponse>("/api/history"),
+    apiFetch<SettingsResponse>("/api/settings"),
+    apiFetch<DemoStatus>("/api/demo"),
   ]);
 
-  return { health, metrics, events, routes };
+  return { health, metrics, events, routes, history, settings, demo };
+}
+
+export async function updateSettings(payload: {
+  mode?: SmartMode;
+  rules?: Partial<RoutingRules>;
+  providerCosts?: Record<string, number>;
+  alerts?: Partial<AlertSettings>;
+}) {
+  return apiFetch<SettingsResponse>("/api/settings", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function triggerDemoScenario(scenario: DemoScenario) {
+  return apiFetch<{ ok: true; status: DemoStatus }>("/api/demo", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ scenario }),
+  });
 }
 
 export async function sendRpc(payload: unknown) {
@@ -181,21 +311,24 @@ export async function sendRpc(payload: unknown) {
     provider: response.headers.get("x-routex-provider") ?? "unknown",
     attempts: response.headers.get("x-routex-attempts"),
     strategy: response.headers.get("x-routex-strategy"),
+    mode: response.headers.get("x-routex-mode"),
+    preference: response.headers.get("x-routex-preference"),
+    explanation: response.headers.get("x-routex-explanation"),
   };
 }
 
 function getProviderColor(name: string, index: number): ProviderColor {
   const lower = name.toLowerCase();
 
-  if (lower.includes("rpcfast")) {
+  if (lower.includes("rpcfast") || lower.includes("alpha")) {
     return providerPalette[0];
   }
 
-  if (lower.includes("quicknode")) {
+  if (lower.includes("quicknode") || lower.includes("beta")) {
     return providerPalette[1];
   }
 
-  if (lower.includes("helius")) {
+  if (lower.includes("helius") || lower.includes("gamma")) {
     return providerPalette[2];
   }
 
@@ -221,6 +354,7 @@ export function toProviderViews(
       lag: provider.slotLag,
       routes: routeCounts[provider.name] ?? 0,
       score: provider.score,
+      costScore: provider.costScore,
       color: color.hex,
       colorHsl: color.hsl,
       active:

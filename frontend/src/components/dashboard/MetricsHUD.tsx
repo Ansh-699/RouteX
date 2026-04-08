@@ -16,6 +16,12 @@ export function MetricsHUD({ health, metrics }: MetricsHUDProps) {
       icon: Activity,
     },
     {
+      label: "Smart Mode",
+      value: health?.routingMode ?? metrics?.smartMode ?? "—",
+      sub: "routing policy",
+      icon: ArrowRightLeft,
+    },
+    {
       label: "Healthy Nodes",
       value: `${health?.healthyProviderCount ?? 0}/${health?.providerCount ?? 0}`,
       sub: "online providers",
@@ -44,7 +50,7 @@ export function MetricsHUD({ health, metrics }: MetricsHUDProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
       {items.map((m) => (
         <Card key={m.label} className="hover:bg-accent/50 transition-colors cursor-default">
           <CardContent className="p-4">

@@ -10,6 +10,9 @@ interface ProbeResult {
   blockhash?: string;
   attempts?: string | null;
   strategy?: string | null;
+  mode?: string | null;
+  preference?: string | null;
+  explanation?: string | null;
   methods?: Array<{ name: string; value: string }>;
   error?: string;
 }
@@ -38,6 +41,9 @@ export function ManualProbe() {
           duration: response.durationMs,
           attempts: response.attempts,
           strategy: response.strategy,
+          mode: response.mode,
+          preference: response.preference,
+          explanation: response.explanation,
           blockhash: typeof blockhash === "string" ? `${blockhash.slice(0, 12)}...` : "n/a",
         });
       } else {
@@ -65,6 +71,9 @@ export function ManualProbe() {
         let provider = "unknown";
         let attempts: string | null = null;
         let strategy: string | null = null;
+        let mode: string | null = null;
+        let preference: string | null = null;
+        let explanation: string | null = null;
 
         for (const payload of requests) {
           const response = await sendRpc(payload);
@@ -72,6 +81,9 @@ export function ManualProbe() {
           provider = response.provider;
           attempts = response.attempts;
           strategy = response.strategy;
+          mode = response.mode;
+          preference = response.preference;
+          explanation = response.explanation;
 
           if (payload.method === "getLatestBlockhash") {
             const blockhash =
@@ -115,6 +127,9 @@ export function ManualProbe() {
           duration: totalDuration,
           attempts,
           strategy,
+          mode,
+          preference,
+          explanation,
           methods: summaries,
         });
       }
@@ -175,10 +190,27 @@ export function ManualProbe() {
                 <span className="text-foreground">{result.strategy}</span>
               </div>
             )}
+            {result.mode && (
+              <div className="flex justify-between text-xs font-mono">
+                <span className="text-muted-foreground">smart mode</span>
+                <span className="text-foreground">{result.mode}</span>
+              </div>
+            )}
+            {result.preference && (
+              <div className="flex justify-between text-xs font-mono">
+                <span className="text-muted-foreground">decision</span>
+                <span className="text-foreground">{result.preference}</span>
+              </div>
+            )}
             {result.blockhash && (
               <div className="flex justify-between text-xs font-mono">
                 <span className="text-muted-foreground">blockhash</span>
                 <span className="text-muted-foreground">{result.blockhash}</span>
+              </div>
+            )}
+            {result.explanation && (
+              <div className="border-t border-border/50 pt-2 text-xs font-mono text-muted-foreground">
+                {result.explanation}
               </div>
             )}
             {result.error && (

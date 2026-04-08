@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { MonitorMode, ProviderConfig, RouteXConfig } from "./types.js";
+import { AlertSettings, MonitorMode, ProviderConfig, RouteXConfig } from "./types.js";
 
 function parseInteger(
   value: string | undefined,
@@ -34,6 +34,14 @@ function parseMonitorMode(value: string | undefined): MonitorMode | "auto" {
   throw new Error(`Invalid ROUTEX_MONITOR_MODE: ${value}`);
 }
 
+function parseOptionalUrl(value: string | undefined): string | null {
+  if (!value || value.trim() === "") {
+    return null;
+  }
+
+  return value.trim();
+}
+
 function normalizeProviderConfig(input: unknown): ProviderConfig {
   if (!input || typeof input !== "object") {
     throw new Error("Provider config must be an object");
@@ -49,6 +57,7 @@ function normalizeProviderConfig(input: unknown): ProviderConfig {
     token,
     writeEnabled,
     priorityBias,
+    costScore,
     tags,
   } = value;
 
@@ -97,6 +106,10 @@ function normalizeProviderConfig(input: unknown): ProviderConfig {
       typeof priorityBias === "number" && Number.isFinite(priorityBias)
         ? priorityBias
         : 0,
+    costScore:
+      typeof costScore === "number" && Number.isFinite(costScore)
+        ? Math.max(0, costScore)
+        : 1,
     tags: Array.isArray(tags)
       ? tags.filter((tag): tag is string => typeof tag === "string")
       : [],
@@ -163,6 +176,14 @@ export async function loadConfig(): Promise<RouteXConfig> {
     "ROUTEX_EVENT_LOG_LIMIT",
   );
   const requestedMonitorMode = parseMonitorMode(process.env.ROUTEX_MONITOR_MODE);
+  const alerts: AlertSettings = {
+    telegramWebhookUrl: parseOptionalUrl(process.env.ROUTEX_TELEGRAM_WEBHOOK_URL),
+    discordWebhookUrl: parseOptionalUrl(process.env.ROUTEX_DISCORD_WEBHOOK_URL),
+    notifyOnProviderStale:
+      process.env.ROUTEX_NOTIFY_ON_PROVIDER_STALE?.trim().toLowerCase() !== "false",
+    notifyOnFailover:
+      process.env.ROUTEX_NOTIFY_ON_FAILOVER?.trim().toLowerCase() !== "false",
+  };
 
   let providers: ProviderConfig[] = [];
 
@@ -200,6 +221,7 @@ export async function loadConfig(): Promise<RouteXConfig> {
     routeLogLimit,
     eventLogLimit,
     monitorMode,
+    alerts,
     providers,
   };
 }

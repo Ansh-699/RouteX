@@ -3,6 +3,9 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import AppDashboard from "./pages/AppDashboard.tsx";
+import FeatureDetail from "./pages/FeatureDetail.tsx";
+import Features from "./pages/Features.tsx";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -16,7 +19,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/features" element={<Features />} />
+          <Route path="/features/:slug" element={<FeatureDetail />} />
+          <Route path="/app" element={<AppDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

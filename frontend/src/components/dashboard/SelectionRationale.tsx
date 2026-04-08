@@ -1,16 +1,23 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { HealthResponse, MetricsResponse, ProviderView } from "@/lib/routex-api";
+import type {
+  HealthResponse,
+  MetricsResponse,
+  ProviderView,
+  SettingsResponse,
+} from "@/lib/routex-api";
 
 interface SelectionRationaleProps {
   health: HealthResponse | null;
   metrics: MetricsResponse | null;
   providers: ProviderView[];
+  settings: SettingsResponse | null;
 }
 
 export function SelectionRationale({
   health,
   metrics,
   providers,
+  settings,
 }: SelectionRationaleProps) {
   const active =
     providers.find((provider) => provider.active) ??
@@ -31,6 +38,7 @@ export function SelectionRationale({
       ? (runnerUp.score - active.score).toFixed(1)
       : "—";
   const methodMix = metrics?.methodCountByStrategy ?? { read: 0, "fresh-read": 0, write: 0 };
+  const rules = settings?.rules;
 
   if (!active) {
     return (
@@ -86,6 +94,32 @@ export function SelectionRationale({
             <div className="font-mono text-xs text-muted-foreground">{activeHealth.lastError}</div>
           </div>
         )}
+
+        <div className="border-t pt-3">
+          <div className="micro-label mb-2">Routing Rules</div>
+          <div className="grid gap-2 text-xs font-mono">
+            <div className="flex items-center justify-between rounded-md bg-secondary px-2.5 py-1.5">
+              <span className="text-muted-foreground">mode</span>
+              <span className="text-foreground font-semibold">{settings?.mode ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-secondary px-2.5 py-1.5">
+              <span className="text-muted-foreground">reads</span>
+              <span className="text-foreground font-semibold">{rules?.read ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-secondary px-2.5 py-1.5">
+              <span className="text-muted-foreground">fresh reads</span>
+              <span className="text-foreground font-semibold">{rules?.freshRead ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-secondary px-2.5 py-1.5">
+              <span className="text-muted-foreground">writes</span>
+              <span className="text-foreground font-semibold">{rules?.write ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-secondary px-2.5 py-1.5">
+              <span className="text-muted-foreground">fallback</span>
+              <span className="text-foreground font-semibold">{rules?.fallbackProvider ?? "none"}</span>
+            </div>
+          </div>
+        </div>
 
         <div className="border-t pt-3">
           <div className="micro-label mb-2">Method Mix</div>

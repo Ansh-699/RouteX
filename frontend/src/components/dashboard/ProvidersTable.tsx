@@ -20,6 +20,7 @@ export function ProvidersTable({ providers }: ProvidersTableProps) {
               <th className="text-right pb-2 pr-3">Latency</th>
               <th className="text-right pb-2 pr-3">Lag</th>
               <th className="text-right pb-2 pr-3">Routes</th>
+              <th className="text-right pb-2 pr-3">Cost</th>
               <th className="text-right pb-2">Score</th>
             </tr>
           </thead>
@@ -51,6 +52,9 @@ export function ProvidersTable({ providers }: ProvidersTableProps) {
                 </td>
                 <td className="py-2.5 pr-3 text-right tabular-nums text-muted-foreground text-xs">
                   {p.routes}
+                </td>
+                <td className="py-2.5 pr-3 text-right tabular-nums text-muted-foreground text-xs">
+                  {p.costScore.toFixed(1)}
                 </td>
                 <td className="py-2.5 text-right tabular-nums font-semibold text-foreground text-xs">
                   {p.score === null ? "—" : p.score.toFixed(1)}

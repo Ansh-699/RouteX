@@ -12,6 +12,7 @@ type MockProvider = {
   name: string;
   port: number;
   behavior: MockBehavior;
+  initialBehavior: MockBehavior;
 };
 
 const providers: MockProvider[] = [
@@ -19,6 +20,13 @@ const providers: MockProvider[] = [
     name: "alpha",
     port: 8891,
     behavior: {
+      lagSlots: 0,
+      latencyMs: 35,
+      errorRate: 0,
+      writeFailureRate: 0,
+      enabled: true,
+    },
+    initialBehavior: {
       lagSlots: 0,
       latencyMs: 35,
       errorRate: 0,
@@ -36,11 +44,25 @@ const providers: MockProvider[] = [
       writeFailureRate: 0,
       enabled: true,
     },
+    initialBehavior: {
+      lagSlots: 3,
+      latencyMs: 20,
+      errorRate: 0,
+      writeFailureRate: 0,
+      enabled: true,
+    },
   },
   {
     name: "gamma",
     port: 8893,
     behavior: {
+      lagSlots: 0,
+      latencyMs: 120,
+      errorRate: 0.15,
+      writeFailureRate: 0.1,
+      enabled: true,
+    },
+    initialBehavior: {
       lagSlots: 0,
       latencyMs: 120,
       errorRate: 0.15,
@@ -269,6 +291,15 @@ function startMockProvider(provider: MockProvider) {
       provider.behavior.enabled = body.enabled;
     }
 
+    response.json({
+      ok: true,
+      provider: provider.name,
+      behavior: provider.behavior,
+    });
+  });
+
+  app.post("/admin/reset", (_request: Request, response: Response) => {
+    provider.behavior = { ...provider.initialBehavior };
     response.json({
       ok: true,
       provider: provider.name,

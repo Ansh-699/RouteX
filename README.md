@@ -37,12 +37,12 @@ Solana apps hard-code a single RPC endpoint. When that node lags behind the chai
               ┌────────────────────────────────────────────────┤
               │              Upstream Providers                │
               │  ┌──────────────────────────┐  ┌───────────┐  │
-              │  │  RPCFast  ★ Yellowstone  │  │ QuickNode │  │
+              │  │  RPCFast  ★ Yellowstone │  │ QuickNode │  │
               │  │  (gRPC slot streaming)   │  │ (RPC poll)│  │
               │  └──────────────────────────┘  └───────────┘  │
               │  ┌──────────┐  ┌───────────────────────────┐  │
               │  │  Helius  │  │  api.mainnet-beta.solana   │  │
-              │  │ (RPC poll│  │        (baseline)          │  │
+              │  │(RPC poll)│  │        (baseline)          │  │
               │  └──────────┘  └───────────────────────────┘  │
               └────────────────────────────────────────────────┘
 ```

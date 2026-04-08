@@ -28,6 +28,13 @@ export type MonitorMode = "rpc" | "yellowstone";
 export type MonitorSource = "rpc" | "yellowstone" | "none";
 export type MethodStrategy = "read" | "fresh-read" | "write";
 export type EventLevel = "info" | "warn" | "error";
+export type RoutingPreference = "fastest" | "freshest" | "cheapest";
+export type SmartMode = RoutingPreference | "custom";
+export type DemoScenario =
+  | "provider-failure"
+  | "latency-spike"
+  | "stale-slot-lag"
+  | "reset";
 
 export type ProviderConfig = {
   name: string;
@@ -38,6 +45,7 @@ export type ProviderConfig = {
   token?: string;
   writeEnabled?: boolean;
   priorityBias?: number;
+  costScore?: number;
   tags?: string[];
 };
 
@@ -64,6 +72,7 @@ export type ProviderState = {
   score: number | null;
   writeEnabled: boolean;
   priorityBias: number;
+  costScore: number;
   tags: string[];
   monitorSource: MonitorSource;
 };
@@ -76,9 +85,52 @@ export type RequestAttempt = {
   errorMessage: string | null;
 };
 
+export type RoutingRules = {
+  read: RoutingPreference;
+  freshRead: RoutingPreference;
+  write: RoutingPreference;
+  fallbackProvider: string | null;
+};
+
+export type AlertSettings = {
+  telegramWebhookUrl: string | null;
+  discordWebhookUrl: string | null;
+  notifyOnProviderStale: boolean;
+  notifyOnFailover: boolean;
+};
+
+export type RuntimeSettings = {
+  mode: SmartMode;
+  rules: RoutingRules;
+  alerts: AlertSettings;
+};
+
+export type RouteCandidateSnapshot = {
+  providerName: string;
+  routeScore: number | null;
+  preference: RoutingPreference;
+  latencyMs: number | null;
+  slotLag: number | null;
+  costScore: number;
+  healthy: boolean;
+  active: boolean;
+};
+
+export type RouteExplanation = {
+  summary: string;
+  mode: SmartMode;
+  preference: RoutingPreference;
+  reasons: string[];
+  fallbackProvider: string | null;
+  strictMaxSlotLag: number | null;
+  policyRelaxed: boolean;
+  candidateSnapshot: RouteCandidateSnapshot[];
+};
+
 export type RouteDecision = {
   provider: ProviderState;
   attempts: number;
+  explanation: RouteExplanation;
 };
 
 export type EventEntry = {
@@ -103,13 +155,18 @@ export type RouteLogEntry = {
   durationMs: number;
   errorMessage: string | null;
   createdAt: string;
+  mode: SmartMode;
+  explanation: RouteExplanation | null;
 };
 
-export type LagHistoryPoint = {
+export type ProviderHistoryPoint = {
   createdAt: string;
   slotLag: number | null;
   score: number | null;
   lastKnownSlot: number | null;
+  latencyMs: number | null;
+  errorRate: number;
+  healthy: boolean;
 };
 
 export type RouteRecord = {
@@ -122,12 +179,58 @@ export type RouteRecord = {
   status: "success" | "failed";
   durationMs: number;
   errorMessage: string | null;
+  mode: SmartMode;
+  explanation: RouteExplanation | null;
 };
 
 export type ProviderCandidateOptions = {
   strategy: MethodStrategy;
   maxSlotLag: number | null;
   healthyOnly?: boolean;
+};
+
+export type ProviderCandidate = {
+  provider: ProviderState;
+  score: number | null;
+  preference: RoutingPreference;
+  snapshot: {
+    latencyMs: number | null;
+    slotLag: number | null;
+    costScore: number;
+    healthy: boolean;
+    active: boolean;
+  };
+};
+
+export type FailoverBanner = {
+  previousProviderName: string | null;
+  nextProviderName: string | null;
+  message: string;
+  reason: string;
+  createdAt: string;
+};
+
+export type DemoBehavior = {
+  lagSlots: number;
+  latencyMs: number;
+  errorRate: number;
+  writeFailureRate: number;
+  enabled: boolean;
+};
+
+export type DemoProviderState = {
+  name: string;
+  available: boolean;
+  adminUrl: string;
+  currentSlot: number | null;
+  chainTip: number | null;
+  behavior: DemoBehavior | null;
+  error: string | null;
+};
+
+export type DemoStatus = {
+  available: boolean;
+  providers: DemoProviderState[];
 };
 
 export type RouteXConfig = {
@@ -141,5 +244,6 @@ export type RouteXConfig = {
   routeLogLimit: number;
   eventLogLimit: number;
   monitorMode: MonitorMode;
+  alerts: AlertSettings;
   providers: ProviderConfig[];
 };

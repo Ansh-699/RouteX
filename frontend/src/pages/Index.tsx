@@ -1,95 +1,241 @@
-import { useState, useEffect, useCallback } from "react";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { MetricsHUD } from "@/components/dashboard/MetricsHUD";
-import { ProvidersTable } from "@/components/dashboard/ProvidersTable";
-import { RaceView } from "@/components/dashboard/RaceView";
-import { SelectionRationale } from "@/components/dashboard/SelectionRationale";
-import { ManualProbe } from "@/components/dashboard/ManualProbe";
-import { TrafficPanel } from "@/components/dashboard/TrafficPanel";
-import { EventsPanel } from "@/components/dashboard/EventsPanel";
-import {
-  type HealthResponse,
-  type MetricsResponse,
-  fetchDashboardSnapshot,
-  toProviderViews,
-  toSystemEventViews,
-  toTrafficLogViews,
-} from "@/lib/routex-api";
+import { Link } from "react-router-dom";
+import { ArrowRight, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { SiteShell } from "@/components/site/SiteShell";
+import { featureEntries } from "@/data/site-content";
+
+const highlights = [
+  {
+    title: "Auto-failover",
+    text: "Show provider switches clearly instead of hiding them in logs.",
+  },
+  {
+    title: "Smart routing",
+    text: "Fastest, Freshest, Cheapest, and custom rules with one click.",
+  },
+  {
+    title: "Demo-ready",
+    text: "Simulate failures, latency spikes, and stale lag without luck.",
+  },
+];
 
 export default function Index() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
-  const [trafficLogs, setTrafficLogs] = useState(() => toTrafficLogViews([]));
-  const [systemEvents, setSystemEvents] = useState(() => toSystemEventViews([]));
-  const [status, setStatus] = useState<"connecting" | "live" | "error">("connecting");
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    try {
-      const snapshot = await fetchDashboardSnapshot();
-      setHealth(snapshot.health);
-      setMetrics(snapshot.metrics);
-      setTrafficLogs(toTrafficLogViews(snapshot.routes));
-      setSystemEvents(toSystemEventViews(snapshot.events));
-      setStatus("live");
-      setLastUpdatedAt(new Date().toISOString());
-    } catch (error) {
-      console.error("RouteX Pulse refresh failed", error);
-      setStatus("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-    const interval = setInterval(() => {
-      void refresh();
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [refresh]);
-
-  const activeProviderName =
-    health?.bestProvider?.name ??
-    health?.providers.find((provider) => provider.active)?.name ??
-    null;
-
-  const providers = toProviderViews(
-    health?.providers ?? [],
-    metrics?.routeProviderCounts ?? {},
-    activeProviderName,
-  );
-
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex flex-col lg:flex-row min-h-screen">
-        {/* Main content */}
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          <DashboardHeader
-            status={status}
-            lastUpdatedAt={lastUpdatedAt}
-            lastSwitchAt={health?.lastActiveSwitchAt ?? null}
-          />
-          <MetricsHUD health={health} metrics={metrics} />
-
-          {/* Providers + Race side by side */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-            <ProvidersTable providers={providers} />
-            <RaceView providers={providers} />
+    <SiteShell>
+      <section className="flex min-h-[82vh] flex-col items-center justify-center text-center">
+        <div className="relative mb-8 opacity-0 animate-scale-in">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-foreground text-3xl font-bold font-mono text-background shadow-[0_0_40px_rgba(255,255,255,0.08)]">
+            RX
           </div>
+          <div className="absolute -inset-3 rounded-[1.8rem] bg-foreground/5 blur-xl animate-glow-pulse" />
+        </div>
 
-          {/* Bottom */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <SelectionRationale health={health} metrics={metrics} providers={providers} />
-            <ManualProbe />
+        <span
+          className="text-[10px] font-semibold uppercase tracking-[0.32em] text-muted-foreground opacity-0 animate-fade-in"
+          style={{ animationDelay: "0.2s" }}
+        >
+          Solana RPC Router
+        </span>
+
+        <h1
+          className="mt-5 max-w-4xl text-5xl font-bold leading-tight text-foreground md:text-6xl lg:text-7xl opacity-0 animate-slide-up"
+          style={{ animationDelay: "0.35s" }}
+        >
+          Route smarter.
+          <br />
+          Ship faster.
+        </h1>
+
+        <p
+          className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground opacity-0 animate-fade-in"
+          style={{ animationDelay: "0.55s" }}
+        >
+          Intelligent RPC routing for Solana with auto-failover, cost-aware
+          decisions, routing explanations, and a live dashboard that makes the
+          system easy to trust.
+        </p>
+
+        <div
+          className="mt-10 flex flex-col items-center gap-4 sm:flex-row opacity-0 animate-fade-in"
+          style={{ animationDelay: "0.75s" }}
+        >
+          <Button
+            asChild
+            size="lg"
+            className="rounded-md bg-foreground px-6 py-3 text-sm font-medium text-background transition-all duration-200 hover:scale-105 hover:opacity-90"
+          >
+            <Link to="/app">
+              Launch App
+              <span className="text-xs">↗</span>
+            </Link>
+          </Button>
+          <Link
+            to="/features"
+            className="inline-flex items-center rounded-md border border-border px-6 py-3 text-sm text-muted-foreground transition-all duration-200 hover:scale-105 hover:border-muted-foreground/40 hover:text-foreground"
+          >
+            Explore Features
+          </Link>
+        </div>
+
+        <div className="mt-14 grid w-full max-w-5xl gap-4 md:grid-cols-3">
+          {highlights.map((item, index) => (
+            <Card
+              key={item.title}
+              className="border-white/10 bg-white/[0.03] opacity-0 animate-fade-in"
+              style={{ animationDelay: `${0.9 + index * 0.12}s` }}
+            >
+              <CardContent className="p-6 text-left">
+                <div className="micro-label">{item.title}</div>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  {item.text}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-8">
+          <div className="micro-label">Why teams use RouteX</div>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            One control plane for performance, freshness, and resilience.
+          </h2>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {[
+              "Smart modes make the product immediately demoable.",
+              "Routing explanations turn infrastructure into something understandable.",
+              "Mini charts and event streams make the app feel alive.",
+              "Demo mode guarantees a strong live walkthrough under pressure.",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm leading-7 text-muted-foreground"
+              >
+                {item}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Right sidebar */}
-        <div className="w-full lg:w-80 xl:w-96 border-t lg:border-t-0 lg:border-l border-border p-4 sm:p-6 flex flex-col gap-4 lg:max-h-screen lg:overflow-hidden">
-          <TrafficPanel logs={trafficLogs} />
-          <EventsPanel events={systemEvents} />
+        <Card className="overflow-hidden rounded-[2rem] border-white/10 bg-black text-white shadow-[0_25px_90px_rgba(0,0,0,0.35)]">
+          <CardContent className="p-0">
+            <div className="border-b border-white/10 p-6">
+              <div className="micro-label text-white/45">Live app preview</div>
+              <h3 className="mt-3 text-2xl font-semibold tracking-tight">
+                Judges see the value instantly.
+              </h3>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="micro-label text-white/45">Failover banner</div>
+                <div className="mt-2 text-lg font-medium">
+                  QuickNode unhealthy, switched to RPCFast.
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <div className="micro-label text-white/45">Smart Mode</div>
+                  <div className="mt-2 text-2xl font-bold">Freshest</div>
+                  <p className="mt-2 text-sm leading-6 text-white/65">
+                    Reads and writes stay pinned to the most up-to-date healthy provider.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <div className="micro-label text-white/45">Demo Mode</div>
+                  <div className="mt-2 flex items-center gap-2 text-sm font-medium">
+                    <Play className="h-4 w-4" />
+                    Simulate provider failure
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-white/65">
+                    Trigger failure, latency spikes, or stale lag in one click.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {[
+                    ["Latency", "39ms"],
+                    ["Slot Lag", "0"],
+                    ["Error Rate", "1.3%"],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <div className="text-[10px] uppercase tracking-[0.18em] text-white/45">
+                        {label}
+                      </div>
+                      <div className="mt-2 text-2xl font-bold tracking-tight">
+                        {value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-20">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="micro-label">Feature pages</div>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Explore the system one capability at a time.
+            </h2>
+          </div>
+          <Link
+            to="/features"
+            className="hidden items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
+          >
+            View all
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-8 grid gap-4 lg:grid-cols-2">
+          {featureEntries.slice(0, 6).map((feature) => (
+            <Link key={feature.slug} to={`/features/${feature.slug}`} className="group">
+              <Card className="h-full border-white/10 bg-white/[0.03] transition-all duration-200 hover:scale-[1.01] hover:border-white/15 hover:bg-white/[0.05]">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="micro-label">{feature.eyebrow}</div>
+                      <h3 className="mt-3 text-2xl font-semibold tracking-tight">
+                        {feature.title}
+                      </h3>
+                      <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                        {feature.summary}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-foreground p-3 text-background shadow-[0_0_24px_rgba(255,255,255,0.08)]">
+                      <feature.icon className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-sm">
+                    <div>
+                      <div className="font-semibold text-foreground">
+                        {feature.heroMetric}
+                      </div>
+                      <div className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        {feature.heroLabel}
+                      </div>
+                    </div>
+                    <div className="text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground">
+                      Read page
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </SiteShell>
   );
 }

@@ -1,6 +1,6 @@
-import { ProviderState } from "./types.js";
+import { ProviderState, RoutingPreference } from "./types.js";
 
-function toErrorRate(state: ProviderState): number {
+export function getProviderErrorRate(state: ProviderState): number {
   const total = state.successCount + state.errorCount + state.timeoutCount;
 
   if (total === 0) {
@@ -10,26 +10,62 @@ function toErrorRate(state: ProviderState): number {
   return (state.errorCount + state.timeoutCount) / total;
 }
 
-export function computeProviderScore(state: ProviderState): number | null {
+function toLatencyPenalty(state: ProviderState, weight: number): number {
+  if (state.avgLatencyMs === null) {
+    return weight * 2;
+  }
+
+  return Math.max(1, state.avgLatencyMs / 100) * weight;
+}
+
+export function computeProviderScore(
+  state: ProviderState,
+  preference: RoutingPreference,
+): number | null {
   if (state.lastKnownSlot === null || state.slotLag === null) {
     return null;
   }
 
-  const latencyPenalty =
-    state.avgLatencyMs === null ? 2 : Math.max(1, state.avgLatencyMs / 120);
-  const errorPenalty = toErrorRate(state) * 50;
+  const errorPenalty = getProviderErrorRate(state) * 55;
   const timeoutPenalty = state.timeoutCount * 2;
   const failurePenalty = state.consecutiveFailures * 7;
-  const healthPenalty = state.healthy ? 0 : 60;
+  const healthPenalty = state.healthy ? 0 : 70;
   const biasBonus = state.priorityBias;
 
-  return (
-    state.slotLag * 12 +
-    latencyPenalty +
-    errorPenalty +
-    timeoutPenalty +
-    failurePenalty +
-    healthPenalty -
-    biasBonus
-  );
+  switch (preference) {
+    case "fastest":
+      return (
+        state.slotLag * 8 +
+        toLatencyPenalty(state, 3.2) +
+        errorPenalty +
+        timeoutPenalty +
+        failurePenalty +
+        healthPenalty +
+        state.costScore * 1.2 -
+        biasBonus
+      );
+    case "cheapest":
+      return (
+        state.slotLag * 10 +
+        toLatencyPenalty(state, 1.5) +
+        errorPenalty +
+        timeoutPenalty +
+        failurePenalty +
+        healthPenalty +
+        state.costScore * 14 -
+        biasBonus
+      );
+    case "freshest":
+    default:
+      return (
+        state.slotLag * 18 +
+        toLatencyPenalty(state, 1.2) +
+        errorPenalty +
+        timeoutPenalty +
+        failurePenalty +
+        healthPenalty +
+        state.costScore * 0.8 -
+        biasBonus
+      );
+  }
 }

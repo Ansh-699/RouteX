@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { loadConfig } from "./config.js";
 import { renderDashboardHtml } from "./dashboard.js";
+import { applyDemoScenario, getDemoStatus } from "./demo.js";
 import { startMonitor } from "./monitor.js";
 import {
   buildJsonRpcErrorResponse,
@@ -12,6 +13,7 @@ import {
 } from "./rpc.js";
 import { ProviderStore } from "./store.js";
 import {
+  DemoScenario,
   JsonRpcBatchRequest,
   JsonRpcBatchResponse,
   JsonRpcRequest,
@@ -115,6 +117,15 @@ function applyCorsHeaders(
   );
 }
 
+function isDemoScenario(value: unknown): value is DemoScenario {
+  return (
+    value === "provider-failure" ||
+    value === "latency-spike" ||
+    value === "stale-slot-lag" ||
+    value === "reset"
+  );
+}
+
 async function bootstrap() {
   const config = await loadConfig();
   const corsConfig = loadCorsConfig();
@@ -123,6 +134,7 @@ async function bootstrap() {
     eventLogLimit: config.eventLogLimit,
     routeLogLimit: config.routeLogLimit,
     configuredMonitorMode: config.monitorMode,
+    alerts: config.alerts,
   });
   const monitor = startMonitor(providerStore, config);
   const app = express();
@@ -145,7 +157,17 @@ async function bootstrap() {
       service: "RouteX API",
       dashboard: "Run the frontend from frontend for the live UI",
       legacyDashboard: "/legacy",
-      endpoints: ["/rpc", "/api/health", "/api/metrics", "/api/events", "/api/routes", "/legacy"],
+      endpoints: [
+        "/rpc",
+        "/api/health",
+        "/api/metrics",
+        "/api/events",
+        "/api/routes",
+        "/api/history",
+        "/api/settings",
+        "/api/demo",
+        "/legacy",
+      ],
     });
   });
 
@@ -178,14 +200,67 @@ async function bootstrap() {
   });
 
   app.get("/api/history", (_request: Request, response: Response) => {
-    return response.json(providerStore.getLagHistory());
+    return response.json(providerStore.getHistory());
+  });
+
+  app.get("/api/settings", (_request: Request, response: Response) => {
+    return response.json(providerStore.getRuntimeSettings());
+  });
+
+  app.post("/api/settings", (request: Request, response: Response) => {
+    return response.json(providerStore.updateRuntimeSettings(request.body ?? {}));
+  });
+
+  app.get("/api/demo", async (_request: Request, response: Response) => {
+    return response.json(await getDemoStatus(providerStore.listProviders()));
+  });
+
+  app.post("/api/demo", async (request: Request, response: Response) => {
+    const scenario = (request.body ?? {}).scenario;
+
+    if (!isDemoScenario(scenario)) {
+      return response.status(400).json({
+        ok: false,
+        error: "Invalid demo scenario",
+      });
+    }
+
+    try {
+      const activeProviderName =
+        providerStore.getSnapshot().bestProvider?.name ?? null;
+      const status = await applyDemoScenario(
+        providerStore.listProviders(),
+        scenario,
+        activeProviderName,
+      );
+
+      providerStore.noteEvent(
+        "info",
+        "demo-scenario",
+        `Demo scenario applied: ${scenario}`,
+        activeProviderName,
+        { scenario },
+      );
+
+      return response.json({
+        ok: true,
+        status,
+      });
+    } catch (error) {
+      return response.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : "Failed to apply demo scenario",
+      });
+    }
   });
 
   app.get("/api/config", (_request: Request, response: Response) => {
+    const settings = providerStore.getRuntimeSettings();
     return response.json({
       host: config.host,
       port: config.port,
       monitorMode: config.monitorMode,
+      smartMode: settings.mode,
       providerCount: config.providers.length,
       providerNames: config.providers.map((provider) => provider.name),
       nodeVersion: process.versions.node,
@@ -223,7 +298,8 @@ async function bootstrap() {
     const strategy = getPayloadStrategy(payload);
     const methodLabel = describePayloadMethods(payload);
     const strictMaxSlotLag = getMaxSlotLagForStrategy(strategy, config);
-    let candidates = providerStore.getOrderedCandidates({
+    let policyRelaxed = false;
+    let candidates = providerStore.getCandidateEvaluations({
       strategy,
       maxSlotLag: strictMaxSlotLag,
     });
@@ -239,13 +315,26 @@ async function bootstrap() {
           strictMaxSlotLag,
         },
       );
-      candidates = providerStore.getOrderedCandidates({
+      policyRelaxed = true;
+      candidates = providerStore.getCandidateEvaluations({
         strategy,
         maxSlotLag: null,
       });
     }
 
+    const activeMode = providerStore.getRuntimeSettings().mode;
+
     if (candidates.length === 0) {
+      const explanation = providerStore.buildRouteExplanation(
+        {
+          strategy,
+          maxSlotLag: policyRelaxed ? null : strictMaxSlotLag,
+        },
+        [],
+        null,
+        policyRelaxed,
+      );
+
       providerStore.recordRoute({
         requestId,
         method: methodLabel,
@@ -256,6 +345,8 @@ async function bootstrap() {
         status: "failed",
         durationMs: 0,
         errorMessage: "No healthy RouteX providers are available",
+        mode: activeMode,
+        explanation,
       });
 
       return response.status(503).json(
@@ -273,11 +364,11 @@ async function bootstrap() {
 
     for (let index = 0; index < candidates.length; index += 1) {
       const candidate = candidates[index];
-      attemptedProviders.push(candidate.name);
+      attemptedProviders.push(candidate.provider.name);
 
       try {
         const { response: upstreamResponse, durationMs } = await callJsonRpc(
-          candidate,
+          candidate.provider,
           payload,
           config.requestTimeoutMs,
         );
@@ -291,7 +382,7 @@ async function bootstrap() {
           index < candidates.length - 1
         ) {
           providerStore.recordRequestAttempt({
-            providerName: candidate.name,
+            providerName: candidate.provider.name,
             durationMs,
             ok: false,
             timeout: false,
@@ -306,7 +397,7 @@ async function bootstrap() {
         }
 
         providerStore.recordRequestAttempt({
-          providerName: candidate.name,
+          providerName: candidate.provider.name,
           durationMs,
           ok: Array.isArray(upstreamResponse)
             ? upstreamResponse.every((entry) => !entry.error)
@@ -316,12 +407,36 @@ async function bootstrap() {
             ? summarizeBatchErrors(upstreamResponse)
             : upstreamResponse.error?.message ?? null,
         });
-        providerStore.markActiveProvider(candidate.name);
+        providerStore.markActiveProvider(candidate.provider.name);
+
+        if (index > 0) {
+          providerStore.noteEvent(
+            "warn",
+            "request-failover",
+            `${attemptedProviders[0]} failed for ${methodLabel}, routed to ${candidate.provider.name}`,
+            candidate.provider.name,
+            {
+              requestId,
+              attemptedProviders,
+            },
+          );
+        }
+
+        const explanation = providerStore.buildRouteExplanation(
+          {
+            strategy,
+            maxSlotLag: policyRelaxed ? null : strictMaxSlotLag,
+          },
+          candidates,
+          candidate.provider.name,
+          policyRelaxed,
+        );
+
         providerStore.recordRoute({
           requestId,
           method: methodLabel,
           strategy,
-          providerName: candidate.name,
+          providerName: candidate.provider.name,
           attemptedProviders,
           attempts: index + 1,
           status: Array.isArray(upstreamResponse)
@@ -335,11 +450,16 @@ async function bootstrap() {
           errorMessage: Array.isArray(upstreamResponse)
             ? summarizeBatchErrors(upstreamResponse)
             : upstreamResponse.error?.message ?? null,
+          mode: activeMode,
+          explanation,
         });
 
-        response.setHeader("x-routex-provider", candidate.name);
+        response.setHeader("x-routex-provider", candidate.provider.name);
         response.setHeader("x-routex-attempts", String(index + 1));
         response.setHeader("x-routex-strategy", strategy);
+        response.setHeader("x-routex-mode", activeMode);
+        response.setHeader("x-routex-preference", explanation.preference);
+        response.setHeader("x-routex-explanation", explanation.summary);
         return response.json(upstreamResponse);
       } catch (error) {
         const errorMessage =
@@ -347,7 +467,7 @@ async function bootstrap() {
         const timeout = errorMessage.includes("aborted");
 
         providerStore.recordRequestAttempt({
-          providerName: candidate.name,
+          providerName: candidate.provider.name,
           durationMs: config.requestTimeoutMs,
           ok: false,
           timeout,
@@ -357,6 +477,16 @@ async function bootstrap() {
         lastError = errorMessage;
       }
     }
+
+    const explanation = providerStore.buildRouteExplanation(
+      {
+        strategy,
+        maxSlotLag: policyRelaxed ? null : strictMaxSlotLag,
+      },
+      candidates,
+      attemptedProviders[0] ?? null,
+      policyRelaxed,
+    );
 
     providerStore.recordRoute({
       requestId,
@@ -368,6 +498,8 @@ async function bootstrap() {
       status: "failed",
       durationMs: Date.now() - startedAt,
       errorMessage: lastError,
+      mode: activeMode,
+      explanation,
     });
 
     return response.status(502).json(
