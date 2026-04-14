@@ -2,6 +2,8 @@
 
 > Route every JSON-RPC call to the fastest, freshest, healthiest Solana node — automatically.
 
+**Live Link:** [https://routex-frontend-rust.vercel.app/](https://routex-frontend-rust.vercel.app/)
+
 ---
 
 ## The Problem
@@ -14,38 +16,7 @@ Solana apps hard-code a single RPC endpoint. When that node lags behind the chai
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────┐
-│                   Your Solana App                    │
-│         (wallet adapter / SDK / custom client)       │
-└───────────────────────┬──────────────────────────────┘
-                        │  JSON-RPC  (POST /rpc)
-                        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       RouteX Proxy                              │
-│                                                                 │
-│  ┌───────────────┐   ┌──────────────────┐   ┌───────────────┐  │
-│  │  Slot Monitor │   │  Scoring Engine  │   │ Proxy Gateway │  │
-│  │               │   │                  │   │               │  │
-│  │  Yellowstone  │──▶│  slotLag × 12    │──▶│  Best ranked  │  │
-│  │  gRPC stream  │   │  + latency       │   │  provider,    │  │
-│  │   — or —      │   │  + error rate    │   │  auto-retry   │  │
-│  │  RPC polling  │   │  + priority bias │   │  on failure   │  │
-│  └───────────────┘   └──────────────────┘   └──────┬────────┘  │
-└─────────────────────────────────────────────────────┼───────────┘
-                                                      │
-              ┌────────────────────────────────────────────────┤
-              │              Upstream Providers                │
-              │  ┌──────────────────────────┐  ┌───────────┐  │
-              │  │  RPCFast  ★ Yellowstone │  │ QuickNode │  │
-              │  │  (gRPC slot streaming)   │  │ (RPC poll)│  │
-              │  └──────────────────────────┘  └───────────┘  │
-              │  ┌──────────┐  ┌───────────────────────────┐  │
-              │  │  Helius  │  │  api.mainnet-beta.solana   │  │
-              │  │(RPC poll)│  │        (baseline)          │  │
-              │  └──────────┘  └───────────────────────────┘  │
-              └────────────────────────────────────────────────┘
-```
+![RouteX Architecture](assets/architecture.png)
 
 ---
 
